@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>icons</title>
+</head>
+
+<body>
+    <script>
+        var sizes = [128, 144, 152, 192, 256, 512];
+
+        var canvas, ctx;
+
+        function createImage(srcImage, size) {
+            console.log(size);
+            canvas.width = canvas.height = size;
+            ctx.drawImage(srcImage, 0, 0, size, size);
+
+            var newImage = document.createElement('img');
+            newImage.alt = size + 'x' + size + '.png';
+            newImage.src = canvas.toDataURL();
+
+            var a = document.createElement('a');
+            a.download = size + '.png';
+            a.href = newImage.src;
+            a.title = size + '.png';
+
+            a.appendChild(newImage);
+            document.body.appendChild(a);
+        }
+
+        (function() {
+            canvas = document.createElement('canvas');
+            ctx = canvas.getContext('2d');
+
+            var img = document.createElement('img');
+            img.onload = function() {
+                console.log('loaded');
+                for (var i = 0; i < sizes.length; i++) {
+                    createImage(img, sizes[i]);
+                }
+            }
+            img.src = '512.png';
+        })()
+    </script>
+</body>
+
+</html>
