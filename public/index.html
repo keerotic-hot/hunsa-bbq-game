@@ -53,8 +53,25 @@
             } else {
                 user = result.user;
                 token = result.credential.accessToken;
+                userReady();
             }
+        }).catch(function(error) {
+            console.log(error);
+            console.log('attemp to login in 2000ms.')
+            setTimeout(login, 2000);
         });
+
+        var userRef;
+
+        function userReady() {
+            console.log('userReady');
+
+            userRef = firebase.database().ref('users/' + FB.getUserID());
+            userRef.on('value', function(snapshot) {
+                console.log('on value');
+                console.log(snapshot.val());
+            });
+        }
     </script>
 </head>
 
