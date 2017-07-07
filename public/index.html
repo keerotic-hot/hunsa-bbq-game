@@ -72,10 +72,7 @@
 
         function createUserData() {
 
-            var data = {
-                //username: user.displayName,
-                item: items[Math.floor(Math.random() * items.length)]
-            };
+            var data = items[Math.floor(Math.random() * items.length)];
             userRef.set(data);
         }
 
