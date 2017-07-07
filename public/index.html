@@ -62,14 +62,40 @@
         });
 
         var userRef;
+        var userData = null;
+        var items = ['หมู', 'ไก่', 'กุ้ง'];
+
+        function zeroPad(n, d) {
+            for (var str = '' + n; str.length < d; str = '0' + str);
+            return str;
+        }
+
+        function createUserData() {
+
+            var data = {
+                //username: user.displayName,
+                item: items[Math.floor(Math.random() * items.length)]
+            };
+            userRef.set(data);
+        }
 
         function userReady() {
             console.log('userReady');
 
-            userRef = firebase.database().ref('users/' + FB.getUserID());
+            var now = new Date();
+            var date = now.getFullYear() + '-' + zeroPad(now.getMonth(), 2) + '-' + zeroPad(now.getDate(), 2);;
+
+            userRef = firebase.database().ref('users/' + FB.getUserID() + '/' + date);
             userRef.on('value', function(snapshot) {
-                console.log('on value');
-                console.log(snapshot.val());
+                userData = snapshot.val();
+
+                console.log('on value', userData);
+
+                if (userData == null) {
+                    createUserData();
+                } else {
+                    $('p').html(JSON.stringify(userData));
+                }
             });
         }
     </script>
