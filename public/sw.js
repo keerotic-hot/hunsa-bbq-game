@@ -3,7 +3,8 @@ var cachedName = 'HunsaBBQ';
 var base = '';
 var filesToCache = [
     base + '/',
-    base + '/index.html'
+    base + '/index.html',
+    base + '/js/jquery-3.2.1.min.js',
 ];
 
 self.addEventListener('install', e => {

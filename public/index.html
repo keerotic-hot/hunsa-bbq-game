@@ -14,6 +14,7 @@
     <meta name="msapplication-TileColor" content="#333" />
     <meta name="theme-color" content="#333">
     <title>Hunsa BBQ Game</title>
+    <script src="js/jquery-3.2.1.min.js"></script>
     <script src="https://www.gstatic.com/firebasejs/4.1.3/firebase.js"></script>
     <script>
         if ('serviceWorker' in navigator) {
@@ -40,6 +41,37 @@
             messagingSenderId: "120181189173"
         };
         firebase.initializeApp(config);
+
+        var provider = new firebase.auth.FacebookAuthProvider();
+        provider.addScope('email');
+
+        function login() {
+            firebase.auth().signInWithRedirect(provider).then(function(result) {
+                console.log(result);
+                // This gives you a Facebook Access Token. You can use it to access the Facebook API.
+                var token = result.credential.accessToken;
+                // The signed-in user info.
+                var user = result.user;
+                // ...
+            }).catch(function(error) {
+                console.log(error);
+                // Handle Errors here.
+                var errorCode = error.code;
+                var errorMessage = error.message;
+                // The email of the user's account used.
+                var email = error.email;
+                // The firebase.auth.AuthCredential type that was used.
+                var credential = error.credential;
+                // ...
+            });
+        }
+
+        firebase.auth().getRedirectResult().then(function(result) {
+            console.log(result);
+            if (result.user == null) {
+                login();
+            } else {}
+        });
     </script>
 </body>
 
