@@ -134,15 +134,25 @@
     </script>
     <script async src="js/brf/BRFv4_JS_trial.js"></script>
     <script>
-        function initBRF() {
-            var webcam = document.getElementById("_webcam"); // our webcam video
-            var imageData = document.getElementById("_imageData"); // image data for BRFv4
+        var interval = 0;
+        var n = 0;
 
-            var brfManager = null;
-            var resolution = null;
-            var brfv4 = null;
+        var webcam = document.getElementById("_webcam"); // our webcam video
+        var imageData = document.getElementById("_imageData"); // image data for BRFv4
 
-            startCamera();
+        var brfManager = null;
+        var resolution = null;
+        var brfv4 = null;
+        var waiting = false;
+
+        function initBRF(reinit) {
+
+            if (!reinit) {
+                startCamera();
+            } else {
+                brfv4 = null;
+                waitForSDK();
+            }
 
             function startCamera() {
 
@@ -187,15 +197,18 @@
                     };
                     initializeBRF(brfv4);
                 }
-
+                //console.log('brfv4.sdkReady : ', brfv4.sdkReady);
                 if (brfv4.sdkReady) {
+                    waiting = false;
                     initSDK();
                 } else {
+                    waiting = true;
                     setTimeout(waitForSDK, 100);
                 }
             }
 
             function initSDK() {
+                //console.log('initSDK');
                 // Resize the canvas to match the webcam video size.
                 imageData.width = webcam.videoWidth;
                 imageData.height = webcam.videoHeight;
@@ -203,9 +216,13 @@
                 resolution = new brfv4.Rectangle(0, 0, imageData.width, imageData.height);
 
                 brfManager = new brfv4.BRFManager();
-                brfManager.init(resolution, resolution, "com.tastenkunst.brfv4.js.examples.minimal.webcam");
+                brfManager.init(resolution, resolution, "com.firebaseapp.hunsa-bbq-game");
 
-                setInterval(trackFaces, 1000 / 30);
+                n = 0;
+                //clearInterval(interval);
+                if (interval == 0) {
+                    interval = setInterval(trackFaces, 1000 / 30);
+                }
             }
 
             function trackFaces() {
@@ -216,25 +233,33 @@
                 imageDataCtx.drawImage(webcam, 0, 0, resolution.width, resolution.height);
                 imageDataCtx.setTransform(1.0, 0, 0, 1, 0, 0); // unmirrored for draw of results
 
-                brfManager.update(imageDataCtx.getImageData(0, 0, resolution.width, resolution.height).data);
+                //console.log(n);
+                if (n++ < 1800) {
+                    brfManager.update(imageDataCtx.getImageData(0, 0, resolution.width, resolution.height).data);
 
-                var faces = brfManager.getFaces();
+                    var faces = brfManager.getFaces();
 
-                for (var i = 0; i < faces.length; i++) {
 
-                    var face = faces[i];
+                    for (var i = 0; i < faces.length; i++) {
 
-                    if (face.state === brfv4.BRFState.FACE_TRACKING_START ||
-                        face.state === brfv4.BRFState.FACE_TRACKING) {
+                        var face = faces[i];
+                        //                        console.log(n, face.state, face);
 
-                        imageDataCtx.strokeStyle = "#00a0ff";
 
-                        for (var k = 0; k < face.vertices.length; k += 2) {
-                            imageDataCtx.beginPath();
-                            imageDataCtx.arc(face.vertices[k], face.vertices[k + 1], 2, 0, 2 * Math.PI);
-                            imageDataCtx.stroke();
+                        if (face.state === brfv4.BRFState.FACE_TRACKING_START ||
+                            face.state === brfv4.BRFState.FACE_TRACKING) {
+
+                            imageDataCtx.strokeStyle = "#00a0ff";
+
+                            for (var k = 0; k < face.vertices.length; k += 2) {
+                                imageDataCtx.beginPath();
+                                imageDataCtx.arc(face.vertices[k], face.vertices[k + 1], 2, 0, 2 * Math.PI);
+                                imageDataCtx.stroke();
+                            }
                         }
                     }
+                } else if (brfv4.sdkReady && !waiting) {
+                    initBRF(true);
                 }
             }
 
