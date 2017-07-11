@@ -105,6 +105,7 @@
     <p>...</p>
     <video id="_webcam" style="display: none;"></video>
     <canvas id="_imageData"></canvas>
+    <canvas id="_t3d"></canvas>
 
     <script>
         window.fbAsyncInit = function() {
@@ -132,18 +133,24 @@
             fjs.parentNode.insertBefore(js, fjs);
         }(document, 'script', 'facebook-jssdk'));
     </script>
-    <script async src="js/brf/BRFv4_JS_trial.js"></script>
+    <script src="js/brf/BRFv4_JS_trial.js"></script>
+    <script src="js/threejs/three.js"></script>
+    <script src="js/utils/BRFv4Drawing3DUtils_ThreeJS.js"></script>
     <script>
         var interval = 0;
         var n = 0;
 
+        var numFacesToTrack = 1;
+
         var webcam = document.getElementById("_webcam"); // our webcam video
         var imageData = document.getElementById("_imageData"); // image data for BRFv4
+        var _t3d = document.getElementById('_t3d');
 
         var brfManager = null;
         var resolution = null;
         var brfv4 = null;
         var waiting = false;
+        var isFirst = true;
 
         function initBRF(reinit) {
 
@@ -218,6 +225,26 @@
                 brfManager = new brfv4.BRFManager();
                 brfManager.init(resolution, resolution, "com.firebaseapp.hunsa-bbq-game");
 
+                brfManager.setNumFacesToTrack(numFacesToTrack);
+
+                // Relax starting conditions to eventually find more faces.
+
+                if (isFirst) {
+                    isFirst = false;
+                    var maxFaceSize = resolution.height;
+
+                    if (resolution.width < resolution.height) {
+                        maxFaceSize = resolution.width;
+                    }
+
+                    brfManager.setFaceDetectionParams(maxFaceSize * 0.20, maxFaceSize * 1.00, 12, 8);
+                    brfManager.setFaceTrackingStartParams(maxFaceSize * 0.20, maxFaceSize * 1.00, 32, 35, 32);
+                    brfManager.setFaceTrackingResetParams(maxFaceSize * 0.15, maxFaceSize * 1.00, 40, 55, 32);
+
+                    loadModels();
+                }
+
+                //_t3d.style.display = 'none';
                 n = 0;
                 //clearInterval(interval);
                 if (interval == 0) {
@@ -235,11 +262,27 @@
 
                 //console.log(n);
                 if (n++ < 1800) {
+
                     brfManager.update(imageDataCtx.getImageData(0, 0, resolution.width, resolution.height).data);
+
+                    if (t3d) t3d.hideAll(); // Hide 3d models. Only show them on top of tracked faces.
 
                     var faces = brfManager.getFaces();
 
+                    for (var i = 0; i < faces.length; i++) {
+                        var face = faces[i];
+                        if (face.state === brfv4.BRFState.FACE_TRACKING) {
+                            if (t3d) t3d.update(i, face, true);
+                        }
+                    }
 
+                    if (t3d) {
+                        t3d.render();
+                    }
+
+                    imageDataCtx.drawImage(_t3d, 0, 0, imageData.width, imageData.height);
+
+                    /*
                     for (var i = 0; i < faces.length; i++) {
 
                         var face = faces[i];
@@ -249,7 +292,7 @@
                         if (face.state === brfv4.BRFState.FACE_TRACKING_START ||
                             face.state === brfv4.BRFState.FACE_TRACKING) {
 
-                            imageDataCtx.strokeStyle = "#00a0ff";
+                            imageDataCtx.strokeStyle = "#ff0000";
 
                             for (var k = 0; k < face.vertices.length; k += 2) {
                                 imageDataCtx.beginPath();
@@ -257,9 +300,17 @@
                                 imageDataCtx.stroke();
                             }
                         }
-                    }
+                    }*/
                 } else if (brfv4.sdkReady && !waiting) {
                     initBRF(true);
+                }
+            }
+
+            function loadModels() {
+                if (t3d) {
+                    t3d.removeAll();
+                    t3d.loadOcclusionHead("assets/brfv4_occlusion_head.json", numFacesToTrack);
+                    t3d.loadModel("assets/brfv4_model.json", numFacesToTrack);
                 }
             }
 
