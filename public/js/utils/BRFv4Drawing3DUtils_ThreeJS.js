@@ -3,8 +3,8 @@
 
 var t3d = {}; // ThreeJS namespace.
 var dom = {
-    stageWidth: 640,
-    stageHeight: 480,
+    stageWidth: 320,
+    stageHeight: 240,
     getElement: function(id) {
         return document.getElementById(id)
     }
@@ -194,7 +194,3 @@ t3d.removeAll = function() {
     }
     t3d.render();
 };
-
-if (t3d.setup && !t3d.stage) {
-    t3d.setup(dom.getElement("_t3d"));
-}

@@ -3,7 +3,7 @@
 
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=320, user-scalable=no">
     <meta http-equiv="X-UA-Compatible" content="ie=edge">
     <link rel="manifest" href="manifest.json" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -14,6 +14,18 @@
     <meta name="msapplication-TileColor" content="#333" />
     <meta name="theme-color" content="#333">
     <title>Hunsa BBQ Game</title>
+    <style>
+        * {
+            padding: 0;
+            margin: 0;
+        }
+        
+        html,
+        body {
+            width: 100%;
+            height: 100%;
+        }
+    </style>
     <script src="js/jquery-3.2.1.min.js"></script>
     <script src="https://www.gstatic.com/firebasejs/4.1.3/firebase.js"></script>
     <script>
@@ -40,26 +52,29 @@
         var provider = new firebase.auth.FacebookAuthProvider();
         provider.addScope('email');
 
-        var user, token, loginError;
+        var loginError;
 
         function login() {
             firebase.auth().signInWithRedirect(provider);
         }
 
-        firebase.auth().getRedirectResult().then(function(result) {
-            console.log(result);
-            if (result.user == null) {
-                login();
-            } else {
-                user = result.user;
-                token = result.credential.accessToken;
-                userReady();
-            }
-        }).catch(function(error) {
-            console.log(error);
-            console.log('attemp to login in 2000ms.')
-            setTimeout(login, 2000);
-        });
+        console.log('firebase.auth().currentUser = ', firebase.auth().currentUser);
+        if (firebase.auth().currentUser == null) {
+            firebase.auth().getRedirectResult().then(function(result) {
+                console.log(result);
+                if (result.user == null) {
+                    login();
+                } else {
+                    userReady();
+                }
+            }).catch(function(error) {
+                console.log(error);
+                console.log('attemp to login in 2000ms.')
+                setTimeout(login, 2000);
+            });
+        } else {
+            userReady();
+        }
 
         var userRef;
         var userData = null;
@@ -175,6 +190,15 @@
                         if (webcam.videoWidth === 0) {
                             setTimeout(onStreamDimensionsAvailable, 100);
                         } else {
+
+                            dom.stageWidth = webcam.videoWidth;
+                            dom.stageHeight = webcam.videoHeight;
+
+                            $('p').html(webcam.videoWidth + ' x ' + webcam.videoHeight);
+
+                            if (t3d.setup && !t3d.stage) {
+                                t3d.setup(dom.getElement("_t3d"));
+                            }
                             waitForSDK();
                         }
                     }
@@ -184,8 +208,8 @@
 
                 window.navigator.mediaDevices.getUserMedia({
                         video: {
-                            width: 640,
-                            height: 480,
+                            width: 320,
+                            height: 240,
                             frameRate: 30
                         }
                     })
