@@ -58,23 +58,19 @@
             firebase.auth().signInWithRedirect(provider);
         }
 
-        console.log('firebase.auth().currentUser = ', firebase.auth().currentUser);
-        if (firebase.auth().currentUser == null) {
-            firebase.auth().getRedirectResult().then(function(result) {
-                console.log(result);
-                if (result.user == null) {
-                    login();
-                } else {
-                    userReady();
-                }
-            }).catch(function(error) {
-                console.log(error);
-                console.log('attemp to login in 2000ms.')
-                setTimeout(login, 2000);
-            });
-        } else {
-            userReady();
-        }
+        firebase.auth().getRedirectResult().then(function(result) {
+            console.log(result);
+            console.log('firebase.auth().currentUser = ', firebase.auth().currentUser);
+            if (result.user == null) {
+                login();
+            } else {
+                userReady();
+            }
+        }).catch(function(error) {
+            console.log(error);
+            console.log('attemp to login in 2000ms.')
+            setTimeout(login, 2000);
+        });
 
         var userRef;
         var userData = null;
@@ -149,7 +145,7 @@
         }(document, 'script', 'facebook-jssdk'));
     </script>
     <script src="js/brf/BRFv4_JS_trial.js"></script>
-    <script src="js/threejs/three.js"></script>
+    <script src="js/threejs/three.min.js"></script>
     <script src="js/utils/BRFv4Drawing3DUtils_ThreeJS.js"></script>
     <script>
         var interval = 0;
