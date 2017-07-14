@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Document</title>
+    <script src="../js/threejs/three.min.js"></script>
+    <script src="../js/threejs/OBJLoader.js"></script>
+    <script src="../js/threejs/MTLLoader.js"></script>
+</head>
+
+<body>
+    <script>
+        var manager = new THREE.LoadingManager();
+        manager.onProgress = function(item, loaded, total) {
+
+            console.log(item, loaded, total);
+
+        };
+
+        var texture = new THREE.Texture();
+
+        var onProgress = function(xhr) {
+            if (xhr.lengthComputable) {
+                var percentComplete = xhr.loaded / xhr.total * 100;
+                console.log(Math.round(percentComplete, 2) + '% downloaded');
+            }
+        };
+
+        var onError = function(xhr) {};
+
+        var mtlLoader = new THREE.MTLLoader();
+        mtlLoader.load('glasses.mtl', function(materials) {
+            materials.preload();
+            var objLoader = new THREE.OBJLoader();
+            objLoader.setMaterials(materials);
+            objLoader.load('glasses.obj', function(object) {
+                console.log(object);
+            }, onProgress, onError);
+        });
+    </script>
+</body>
+
+</html>
