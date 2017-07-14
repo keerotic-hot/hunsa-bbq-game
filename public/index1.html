@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=320, user-scalable=no">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <link rel="manifest" href="manifest.json" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="#333" />
+    <meta name="apple-mobile-web-app-title" content="Hunsa BBQ Game" />
+    <link rel="apple-touch-icon" href="img/icons/152.png" />
+    <meta name="msapplication-TileImage" content="img/icons/144.png" />
+    <meta name="msapplication-TileColor" content="#333" />
+    <meta name="theme-color" content="#333">
+    <title>Hunsa BBQ Game</title>
+    <style>
+        * {
+            padding: 0;
+            margin: 0;
+        }
+        
+        html,
+        body {
+            width: 100%;
+            height: 100%;
+        }
+    </style>
+    <script src="js/jquery-3.2.1.min.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/4.1.3/firebase.js"></script>
+    <script>
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker
+                .register('sw.js')
+                .then(function() {
+                    console.log("Service Worker Registered");
+                });
+        }
+    </script>
+    <script>
+        // Initialize Firebase
+        var config = {
+            apiKey: "AIzaSyBRuArQ8OTaHcnHiH6VQi5hOg4KuMYrFnU",
+            authDomain: "hunsa-bbq-game.firebaseapp.com",
+            databaseURL: "https://hunsa-bbq-game.firebaseio.com",
+            projectId: "hunsa-bbq-game",
+            storageBucket: "hunsa-bbq-game.appspot.com",
+            messagingSenderId: "120181189173"
+        };
+        firebase.initializeApp(config);
+
+        var provider = new firebase.auth.FacebookAuthProvider();
+        provider.addScope('email');
+
+        var loginError;
+
+        function login() {
+            firebase.auth().signInWithRedirect(provider);
+        }
+
+        firebase.auth().getRedirectResult().then(function(result) {
+            console.log(result);
+            console.log('firebase.auth().currentUser = ', firebase.auth().currentUser);
+            if (result.user == null) {
+                login();
+            } else {
+                userReady();
+            }
+        }).catch(function(error) {
+            console.log(error);
+            console.log('attemp to login in 2000ms.')
+            setTimeout(login, 2000);
+        });
+
+        var userRef;
+        var userData = null;
+        var items = ['หมู', 'ไก่', 'กุ้ง'];
+
+        function zeroPad(n, d) {
+            for (var str = '' + n; str.length < d; str = '0' + str);
+            return str;
+        }
+
+        function createUserData() {
+
+            var data = items[Math.floor(Math.random() * items.length)];
+            userRef.set(data);
+        }
+
+        function userReady() {
+            console.log('userReady');
+
+            var now = new Date();
+            var date = now.getFullYear() + '-' + zeroPad(now.getMonth(), 2) + '-' + zeroPad(now.getDate(), 2);;
+
+            userRef = firebase.database().ref('users/' + FB.getUserID() + '/' + date);
+            userRef.on('value', function(snapshot) {
+                userData = snapshot.val();
+
+                console.log('on value', userData);
+
+                if (userData == null) {
+                    createUserData();
+                } else {
+                    $('p').html(JSON.stringify(userData));
+
+                    initBRF();
+                }
+            });
+        }
+    </script>
+</head>
+
+<body>
+    <h1>Hunsa BBQ Game</h1>
+    <p>...</p>
+    <video id="_webcam" style="display: none;"></video>
+    <canvas id="_imageData"></canvas>
+    <canvas id="_t3d"></canvas>
+
+    <script>
+        window.fbAsyncInit = function() {
+            FB.init({
+                appId: '683105365212425',
+                xfbml: true,
+                version: 'v2.9'
+            });
+            FB.AppEvents.logPageView();
+
+            FB.getLoginStatus(function(r) {
+                console.log(r);
+                $('p').html(JSON.stringify(r));
+            });
+        };
+
+        (function(d, s, id) {
+            var js, fjs = d.getElementsByTagName(s)[0];
+            if (d.getElementById(id)) {
+                return;
+            }
+            js = d.createElement(s);
+            js.id = id;
+            js.src = "//connect.facebook.net/en_US/sdk.js";
+            fjs.parentNode.insertBefore(js, fjs);
+        }(document, 'script', 'facebook-jssdk'));
+    </script>
+    <script src="js/brf/BRFv4_JS_trial.js"></script>
+    <script src="js/threejs/three.min.js"></script>
+    <script src="js/utils/BRFv4Drawing3DUtils_ThreeJS.js"></script>
+    <script>
+        var interval = 0;
+        var n = 0;
+
+        var numFacesToTrack = 1;
+
+        var webcam = document.getElementById("_webcam"); // our webcam video
+        var imageData = document.getElementById("_imageData"); // image data for BRFv4
+        var _t3d = document.getElementById('_t3d');
+
+        var brfManager = null;
+        var resolution = null;
+        var brfv4 = null;
+        var waiting = false;
+        var isFirst = true;
+
+        function initBRF(reinit) {
+
+            if (!reinit) {
+                startCamera();
+            } else {
+                brfv4 = null;
+                waitForSDK();
+            }
+
+            function startCamera() {
+
+                // Start video playback once the camera was fetched.
+                function onStreamFetched(mediaStream) {
+
+                    webcam.srcObject = mediaStream;
+                    webcam.play();
+
+                    // Check whether we know the video dimensions yet, if so, start BRFv4.
+                    function onStreamDimensionsAvailable() {
+
+                        if (webcam.videoWidth === 0) {
+                            setTimeout(onStreamDimensionsAvailable, 100);
+                        } else {
+
+                            dom.stageWidth = webcam.videoWidth;
+                            dom.stageHeight = webcam.videoHeight;
+
+                            $('p').html(webcam.videoWidth + ' x ' + webcam.videoHeight);
+
+                            if (t3d.setup && !t3d.stage) {
+                                t3d.setup(dom.getElement("_t3d"));
+                            }
+                            waitForSDK();
+                        }
+                    }
+
+                    onStreamDimensionsAvailable();
+                }
+
+                window.navigator.mediaDevices.getUserMedia({
+                        video: {
+                            width: 320,
+                            height: 240,
+                            frameRate: 30
+                        }
+                    })
+                    .then(onStreamFetched).catch(function() {
+                        alert("No camera available.");
+                    });
+            }
+
+            function waitForSDK() {
+
+                if (brfv4 === null) {
+                    brfv4 = {
+                        locateFile: function() {
+                            return "js/brf/BRFv4_JS_trial.js.mem"
+                        }
+                    };
+                    initializeBRF(brfv4);
+                }
+                //console.log('brfv4.sdkReady : ', brfv4.sdkReady);
+                if (brfv4.sdkReady) {
+                    waiting = false;
+                    initSDK();
+                } else {
+                    waiting = true;
+                    setTimeout(waitForSDK, 100);
+                }
+            }
+
+            function initSDK() {
+                //console.log('initSDK');
+                // Resize the canvas to match the webcam video size.
+                imageData.width = webcam.videoWidth;
+                imageData.height = webcam.videoHeight;
+
+                resolution = new brfv4.Rectangle(0, 0, imageData.width, imageData.height);
+
+                brfManager = new brfv4.BRFManager();
+                brfManager.init(resolution, resolution, "com.firebaseapp.hunsa-bbq-game");
+
+                brfManager.setNumFacesToTrack(numFacesToTrack);
+
+                // Relax starting conditions to eventually find more faces.
+
+                if (isFirst) {
+                    isFirst = false;
+                    var maxFaceSize = resolution.height;
+
+                    if (resolution.width < resolution.height) {
+                        maxFaceSize = resolution.width;
+                    }
+
+                    brfManager.setFaceDetectionParams(maxFaceSize * 0.20, maxFaceSize * 1.00, 12, 8);
+                    brfManager.setFaceTrackingStartParams(maxFaceSize * 0.20, maxFaceSize * 1.00, 32, 35, 32);
+                    brfManager.setFaceTrackingResetParams(maxFaceSize * 0.15, maxFaceSize * 1.00, 40, 55, 32);
+
+                    loadModels();
+                }
+
+                //_t3d.style.display = 'none';
+                n = 0;
+                //clearInterval(interval);
+                if (interval == 0) {
+                    interval = setInterval(trackFaces, 1000 / 30);
+                }
+            }
+
+            function trackFaces() {
+
+                var imageDataCtx = imageData.getContext("2d");
+
+                imageDataCtx.setTransform(-1.0, 0, 0, 1, resolution.width, 0); // mirrored for draw of video
+                imageDataCtx.drawImage(webcam, 0, 0, resolution.width, resolution.height);
+                imageDataCtx.setTransform(1.0, 0, 0, 1, 0, 0); // unmirrored for draw of results
+
+                //console.log(n);
+                if (n++ < 1800) {
+
+                    brfManager.update(imageDataCtx.getImageData(0, 0, resolution.width, resolution.height).data);
+
+                    if (t3d) t3d.hideAll(); // Hide 3d models. Only show them on top of tracked faces.
+
+                    var faces = brfManager.getFaces();
+
+                    for (var i = 0; i < faces.length; i++) {
+                        var face = faces[i];
+                        if (face.state === brfv4.BRFState.FACE_TRACKING) {
+                            if (t3d) t3d.update(i, face, true);
+                        }
+                    }
+
+                    if (t3d) {
+                        t3d.render();
+                    }
+
+                    imageDataCtx.drawImage(_t3d, 0, 0, imageData.width, imageData.height);
+
+                    /*
+                    for (var i = 0; i < faces.length; i++) {
+
+                        var face = faces[i];
+                        //                        console.log(n, face.state, face);
+
+
+                        if (face.state === brfv4.BRFState.FACE_TRACKING_START ||
+                            face.state === brfv4.BRFState.FACE_TRACKING) {
+
+                            imageDataCtx.strokeStyle = "#ff0000";
+
+                            for (var k = 0; k < face.vertices.length; k += 2) {
+                                imageDataCtx.beginPath();
+                                imageDataCtx.arc(face.vertices[k], face.vertices[k + 1], 2, 0, 2 * Math.PI);
+                                imageDataCtx.stroke();
+                            }
+                        }
+                    }*/
+                } else if (brfv4.sdkReady && !waiting) {
+                    initBRF(true);
+                }
+            }
+
+            function loadModels() {
+                if (t3d) {
+                    t3d.removeAll();
+                    t3d.loadOcclusionHead("assets/brfv4_occlusion_head.json", numFacesToTrack);
+                    //t3d.loadModel("assets/brfv4_model.json", numFacesToTrack);
+                    t3d.loadModel("assets/glasses.json", numFacesToTrack);
+                }
+            }
+
+        }
+    </script>
+</body>
+
+</html>
