@@ -4,6 +4,7 @@ var base = '';
 var filesToCache = [
     base + '/',
     base + '/index.html',
+    base + '/login.html',
     base + '/js/jquery-3.2.1.min.js',
     base + '/js/threejs/three.min.js',
     base + '/js/brf/BRFv4_JS_trial.js',

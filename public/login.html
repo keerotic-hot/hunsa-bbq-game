@@ -53,53 +53,60 @@
         };
         firebase.initializeApp(config);
 
-        var userRef, userData;
+        var provider = new firebase.auth.FacebookAuthProvider();
+        provider.addScope('email');
+
+        var loginError;
         var cuserRef, cuserData;
-        var keyRef, keyData;
 
-        userRef = firebase.database().ref('users');
-        userRef.on('value', function(snapshot) {
-            userData = snapshot.val();
-            console.log('userRef on value', userData);
-        });
+        var user, credential;
 
-        cuserRef = firebase.database().ref('currentUser');
-        cuserRef.on('value', function(snapshot) {
-            cuserData = snapshot.val();
-            console.log('cuserRef on value', cuserData);
-            $('#profile').attr('src', 'https://graph.facebook.com/' + cuserData.id + '/picture');
-            $('#username').html(cuserData.name);
-        });
+        function login() {
+            firebase.auth().signInWithRedirect(provider);
+        }
 
-        keyRef = firebase.database().ref('token');
-        keyRef.on('value', function(snapshot) {
-            keyData = snapshot.val();
-            console.log('keyRef on value', keyData);
-
-            if (keyData == null) {
-                createKey();
+        firebase.auth().getRedirectResult().then(function(result) {
+            console.log(result);
+            console.log('firebase.auth().currentUser = ', firebase.auth().currentUser);
+            if (result.user == null) {
+                login();
             } else {
-                var url = "https://hunsa-bbq-game.firebaseapp.com/login.html#" + keyData;
-                $('#qrcode').html('').qrcode({
-                    text: url
-                });
-                $('#link').html(url).attr('href', url);
+                user = result.user;
+                credential = result.credential;
+                userReady();
             }
+        }).catch(function(error) {
+            console.log(error);
+            console.log('attemp to login in 2000ms.')
+            setTimeout(login, 10000);
         });
 
-        function createKey() {
-            keyRef.set(btoa(Date.now()));
+        function userReady() {
+
+            cuserRef = firebase.database().ref('currentUser');
+            cuserRef.on('value', function(snapshot) {
+                cuserData = snapshot.val();
+                console.log('cuserRef on value', cuserData);
+            });
+
+
+            $.ajax({
+                url: 'https://graph.facebook.com/me',
+                data: {
+                    'access_token': credential.accessToken
+                }
+            }).done(function(r) {
+                console.log(r);
+                cuserRef.set({
+                    name: user.displayName,
+                    id: r.id
+                });
+            });
         }
     </script>
 </head>
 
 <body>
-    <div id="qrcode"></div>
-    <a id="link" target="_blank"></a>
-    <div id="currentUser">
-        <img id="profile" />
-        <span id="username"></div>
-    </div>
 </body>
 
 </html>
